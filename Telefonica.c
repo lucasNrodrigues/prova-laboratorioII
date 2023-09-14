@@ -118,11 +118,9 @@ void adicionarContato() {
 void listarContatos() {
     int i;
 
-    // Imprimir o cabeçalho da lista
     printf("Lista de contatos:\n");
     printf("Nome | E-mail | Telefone\n");
 
-    // Imprimir cada contato
     for (i = 0; i < MAX_CONTATOS; i++) {
         if (strlen(tabela[i].nome) > 0) {
             printf("%s | %s | %s\n", tabela[i].nome, tabela[i].email, tabela[i].telefone);
