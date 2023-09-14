@@ -100,12 +100,10 @@ void adicionarContato() {
     
     int indice = hash(novoContato.nome);
 
-    // Verificar se o índice está livre
     if (strlen(tabela[indice].nome) == 0) {
         tabela[indice] = novoContato;
         printf("Contato adicionado com sucesso!\n");
     } else {
-        // Verificar se o contato já existe
         int indice_colisao = hash_colisao(indice);
         while (strlen(tabela[indice_colisao].nome) > 0) {
             indice_colisao = hash_colisao(indice_colisao);
@@ -139,7 +137,6 @@ void buscarContato() {
     
     indice = hash(nome);
 
-    // Verificar se o contato existe
     if (strlen(tabela[indice].nome) > 0) {
        
         printf("Contato encontrado:\n");
