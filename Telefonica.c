@@ -14,8 +14,7 @@ typedef struct {
 
 
 #define MAX_CONTATOS 100
-#define _CTYPE_H
-
+#define cyper 42
 
 Contato tabela[MAX_CONTATOS];
 
@@ -24,14 +23,16 @@ int hash(char* chave) {
     unsigned int h = 0;
     int i;
     for (i = 0; chave[i] != '\0'; i++) {
-        h = h * 31 + chave[i];
+        h  += chave[i];
     }
     return h % MAX_CONTATOS;
 }
 
-
-int hash_colisao(int indice) {
-    return (indice + 1) % MAX_CONTATOS;
+int funcHashMult(char* chave) { 
+    srand(time(NULL));
+    int h;
+    float random = rand() / (float)RAND_MAX; 
+    return (int)(h * random * MAX_CONTATOS) % MAX_CONTATOS; 
 }
 
 
@@ -97,18 +98,25 @@ void adicionarContato() {
         return;
     }
 
-    
     int indice = hash(novoContato.nome);
 
     if (strlen(tabela[indice].nome) == 0) {
         tabela[indice] = novoContato;
         printf("Contato adicionado com sucesso!\n");
     } else {
-        int indice_colisao = hash_colisao(indice);
-        while (strlen(tabela[indice_colisao].nome) > 0) {
-            indice_colisao = hash_colisao(indice_colisao);
+       
+        Contato* atual = &tabela[indice];
+        while (atual->proximo != NULL) {
+            atual = atual->proximo;
         }
-        tabela[indice_colisao] = novoContato;
+        atual->proximo = (Contato*)malloc(sizeof(Contato)); 
+        if (atual->proximo == NULL) {
+            printf("Erro ao alocar memória para o novo contato.\n");
+            return;
+        }
+        atual = atual->proximo;
+        *atual = novoContato;
+        atual->proximo = NULL;
         printf("Contato adicionado com sucesso!\n");
     }
 }
@@ -121,7 +129,11 @@ void listarContatos() {
 
     for (i = 0; i < MAX_CONTATOS; i++) {
         if (strlen(tabela[i].nome) > 0) {
-            printf("%s | %s | %s\n", tabela[i].nome, tabela[i].email, tabela[i].telefone);
+            Contato* atual = &tabela[i];
+            while (atual != NULL) {
+                printf("%s | %s | %s\n", atual->nome, atual->email, atual->telefone);
+                atual = atual->proximo;
+            }
         }
     }
 }
