@@ -5,6 +5,7 @@
 #include <ctype.h>
 #include <locale.h>
 #include <time.h>
+#include <regex.h>
 
 
 typedef struct Contato {
@@ -20,24 +21,20 @@ typedef struct Contato {
 #define cyper 42
 
 Contato tabela[MAX_CONTATOS];
-
+int numElementos = 0;
 
 int hash(char* chave) {
     unsigned int h = 0;
+    float A = 0.6180339887;  
     int i;
     for (i = 0; chave[i] != '\0'; i++) {
-        h  += chave[i];
+        h += chave[i];
     }
-    return h % MAX_CONTATOS;
-}
 
-int funcHashMult(char* chave) { 
-    srand(time(NULL));
-    int h;
-    float random = rand() / (float)RAND_MAX; 
-    return (int)(h * random * MAX_CONTATOS) % MAX_CONTATOS; 
+    
+    float valorDecimal = A * h;
+    return (int)(MAX_CONTATOS * (valorDecimal - (int)valorDecimal));
 }
-
 
 bool validarNome(char* nome) {
     int i;
@@ -49,18 +46,28 @@ bool validarNome(char* nome) {
     return true;
 }
 
-
 bool validarEmail(char* email) {
-    int i, atCount = 0, dotCount = 0;
-    for (i = 0; email[i] != '\0'; i++) {
-        if (email[i] == '@') {
-            atCount++;
-        }
-        if (email[i] == '.') {
-            dotCount++;
-        }
+    
+    const char* regex_pattern = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$";
+
+    regex_t regex;
+    int result = regcomp(&regex, regex_pattern, REG_EXTENDED);
+
+    if (result != 0) {
+        printf("Erro ao compilar a expressão regular.\n");
+        return false;
     }
-    return atCount == 1 && dotCount >= 1;
+
+    result = regexec(&regex, email, 0, NULL, 0);
+
+    regfree(&regex);
+
+    if (result == 0) {
+        return true; 
+    } else {
+        printf("E-mail inválido. Digite um e-mail válido.\n");
+        return false; 
+    }
 }
 
 
@@ -76,16 +83,21 @@ bool validarTelefone(char* telefone) {
     }
     return digitCount >= 8 && digitCount <= 12 && dashCount <= 1;
 }
-
 void adicionarContato() {
+    if (numElementos >= MAX_CONTATOS) {
+        printf("A tabela está cheia. Não é possível adicionar mais contatos.\n");
+        return;
+    }
+
     Contato novoContato;
 
-    // Exibe o menu para adicionar um contato
     printf("** Adicionar contato **\n\n");
+
+    
     printf("Digite o nome: ");
     scanf("%s", novoContato.nome);
 
-    // Valida o nome do contato
+    
     if (!validarNome(novoContato.nome)) {
         printf("Nome inválido.\n");
         return;
@@ -94,7 +106,7 @@ void adicionarContato() {
     printf("Digite o e-mail: ");
     scanf("%s", novoContato.email);
 
-    // Valida o e-mail do contato
+    
     if (!validarEmail(novoContato.email)) {
         printf("E-mail inválido.\n");
         return;
@@ -103,96 +115,56 @@ void adicionarContato() {
     printf("Digite o telefone: ");
     scanf("%s", novoContato.telefone);
 
-    // Valida o telefone do contato
+    
     if (!validarTelefone(novoContato.telefone)) {
         printf("Telefone inválido.\n");
         return;
     }
 
-    // Calcula o índice do hash do contato
     int indice = hash(novoContato.nome);
 
-    // Insere o contato na tabela
-    if (tabela[indice].proximo == NULL) {
-        tabela[indice].proximo = (Contato*)malloc(sizeof(Contato));
-        if (tabela[indice].proximo == NULL) {
-            printf("Erro ao alocar memória para o novo contato.\n");
-            return;
-        }
-        *tabela[indice].proximo = novoContato;
-        tabela[indice].proximo->proximo = NULL;
-        printf("Contato adicionado com sucesso!\n");
-    } else {
-        Contato* atual = tabela[indice].proximo;
-        while (atual->proximo != NULL) {
-            atual = atual->proximo;
-        }
-        atual->proximo = (Contato*)malloc(sizeof(Contato));
-        if (atual->proximo == NULL) {
-            printf("Erro ao alocar memória para o novo contato.\n");
-            return;
-        }
-        *atual->proximo = novoContato;
-        atual->proximo->proximo = NULL;
-        printf("Contato adicionado com sucesso!\n");
+    while (tabela[indice].nome[0] != '\0') {
+        indice = (indice + 1) % MAX_CONTATOS;
     }
+
+    tabela[indice] = novoContato;
+    numElementos++;
+
+    printf("Contato adicionado com sucesso!\n");
 }
 
 void listarContatos() {
-    int i;
-    int contatosListados = 0;  // Variável para controlar o número de contatos listados
-
     printf("Lista de contatos:\n");
     printf("Nome | E-mail | Telefone\n");
 
-    for (i = 0; i < MAX_CONTATOS; i++) {
-        if (tabela[i].proximo != NULL) {
-            Contato* atual = tabela[i].proximo;
-            while (atual != NULL) {
-                printf("%s | %s | %s\n", atual->nome, atual->email, atual->telefone);
-                atual = atual->proximo;
-                contatosListados++;
-
-                // Adiciona uma pausa após listar cada grupo de contatos
-                if (contatosListados % 10 == 0) {
-                    printf("Pressione Enter para continuar...");
-                    while (getchar() != '\n');
-                }
-            }
+    for (int i = 0; i < MAX_CONTATOS; i++) {
+        if (tabela[i].nome[0] != '\0') {
+            printf("%s | %s | %s\n", tabela[i].nome, tabela[i].email, tabela[i].telefone);
         }
     }
-
-    printf("\n");
 }
-
 void buscarContato() {
     char nome[50];
-    int indice;
 
-    // Exibe o menu para buscar um contato
     printf("** Buscar contato **\n\n");
     printf("Digite o nome do contato a ser buscado: ");
     scanf("%s", nome);
 
-    // Calcula o índice do hash do contato
-    indice = hash(nome);
-
-    // Busca o contato na tabela
-    Contato* contato = tabela[indice].proximo;
-    while (contato != NULL && strcmp(contato->nome, nome) != 0) {
-        contato = contato->proximo;
+    
+    for (int i = 0; i < MAX_CONTATOS; i++) {
+        if (strcmp(tabela[i].nome, nome) == 0) {
+            
+            printf("Contato encontrado:\n");
+            printf("Nome: %s\n", tabela[i].nome);
+            printf("E-mail: %s\n", tabela[i].email);
+            printf("Telefone: %s\n", tabela[i].telefone);
+            return; 
+        }
     }
 
-    // Imprime o contato encontrado
-    if (contato != NULL) {
-        printf("Contato encontrado:\n");
-        printf("Nome: %s\n", contato->nome);
-        printf("E-mail: %s\n", contato->email);
-        printf("Telefone: %s\n", contato->telefone);
-    } else {
-        printf("Contato não encontrado.\n");
-    }
+    printf("Contato não encontrado.\n");
 }
+
 void exportarContatos() {
     FILE* arquivo = fopen("contatos.txt", "w");
 
@@ -204,12 +176,8 @@ void exportarContatos() {
     fprintf(arquivo, "nome,email,telefone\n");
 
     for (int i = 0; i < MAX_CONTATOS; i++) {
-        if (tabela[i].proximo != NULL) {
-            Contato* atual = tabela[i].proximo;
-            while (atual != NULL) {
-                fprintf(arquivo, "%s,%s,%s\n", atual->nome, atual->email, atual->telefone);
-                atual = atual->proximo;
-            }
+        if (strlen(tabela[i].nome) > 0) {
+            fprintf(arquivo, "%s,%s,%s\n", tabela[i].nome, tabela[i].email, tabela[i].telefone);
         }
     }
 
@@ -217,27 +185,42 @@ void exportarContatos() {
 
     printf("Contatos exportados com sucesso.\n");
 }
+void deletarContato(char* nome) {
+    for (int i = 0; i < MAX_CONTATOS; i++) {
+        if (strcmp(tabela[i].nome, nome) == 0) {
+            
+            tabela[i].nome[0] = '\0';
+            tabela[i].email[0] = '\0';
+            tabela[i].telefone[0] = '\0';
+            numElementos--;
+            printf("Contato '%s' excluído com sucesso.\n", nome);
+            return; 
+        }
+    }
+    printf("Contato '%s' não encontrado.\n", nome);
+}
 
 int main() {
     int opcao;
     int tentativas = 0;
 
-    // Exibe o menu principal
+    
     while (true) {
         printf("** Agenda de contatos **\n\n");
         printf("1. Adicionar contato\n");
         printf("2. Listar contatos\n");
         printf("3. Buscar contato\n");
         printf("4. Exportar contatos\n");
-        printf("5. Sair\n\n");
+        printf("5. Deletar contato\n");
+        printf("6. Sair\n\n");
 
-        // Valida a opção selecionada
+        
         do {
             printf("Digite a opção desejada: ");
-            while (getchar() != '\n');  // Limpar o buffer de entrada
-        } while (scanf("%d", &opcao) != 1 || opcao < 1 || opcao > 5);
+            while (getchar() != '\n'); 
+        } while (scanf("%d", &opcao) != 1 || opcao < 1 || opcao > 6);
 
-        // Processa a opção selecionada
+        
         switch (opcao) {
             case 1:
                 adicionarContato();
@@ -252,11 +235,16 @@ int main() {
                 exportarContatos();
                 break;
             case 5:
+                printf("Digite o nome do contato a ser excluído: ");
+                char nomeExcluir[50];
+                scanf("%s", nomeExcluir);
+                deletarContato(nomeExcluir);
+                break;
+            case 6:
                 printf("Saindo...\n");
                 return 0;
         }
-
-        // Verifica se o usuário digitou uma opção válida
+        
         if (tentativas == 3) {
             printf("Excedeu o número máximo de tentativas.\n");
             return 1;
